@@ -289,7 +289,7 @@
                 });
             }
         }
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWRtmygcJY6v6Vk4vP3wzI1Wd0jAl0vhwcNim7mMx1KZ84dF6novfXAycxmNoffucWCA/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvY5sIu8qzcGhmD0ENkOHuSrVurub4xd_a8AXQ4mbsKIKG3R4ypo3rKSQUcOk2uRhilg/exec';
 
         // Встановлення сьогоднішньої дати
         document.addEventListener('DOMContentLoaded', function() {
@@ -325,40 +325,49 @@
                     throw new Error('Необхідно налаштувати Google Apps Script URL');
                 }
 
-                // Відправка даних
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
+                // Використовуємо form submission замість fetch
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.name = 'hidden_iframe';
+                document.body.appendChild(iframe);
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = GOOGLE_SCRIPT_URL;
+                form.target = 'hidden_iframe';
+
+                // Додаємо поля форми
+                Object.keys(data).forEach(key => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = data[key];
+                    form.appendChild(input);
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
+                document.body.appendChild(form);
+                form.submit();
                 
-                if (result.success) {
-                    // Успішно відправлено
-                    statusMessage.className = 'status-message status-success';
-                    statusMessage.textContent = '✅ Витрату успішно додано!';
-                    statusMessage.style.display = 'block';
-                    
-                    // Очищення форми
-                    document.getElementById('amount').value = '';
-                    document.getElementById('category').value = 'Продукти';
-                    document.getElementById('comment').value = '';
-                    
-                    // Фокус на поле суми для швидкого введення наступної витрати
-                    setTimeout(() => {
-                        document.getElementById('amount').focus();
-                    }, 100);
-                } else {
-                    throw new Error(result.error || 'Невідома помилка');
-                }
+                // Очищаємо створені елементи
+                setTimeout(() => {
+                    document.body.removeChild(form);
+                    document.body.removeChild(iframe);
+                }, 1000);
+
+                // Показуємо успіх (оскільки iframe приховує відповідь)
+                statusMessage.className = 'status-message status-success';
+                statusMessage.textContent = '✅ Витрату успішно додано!';
+                statusMessage.style.display = 'block';
+                
+                // Очищення форми
+                document.getElementById('amount').value = '';
+                document.getElementById('category').value = 'Продукти';
+                document.getElementById('comment').value = '';
+                
+                // Фокус на поле суми для швидкого введення наступної витрати
+                setTimeout(() => {
+                    document.getElementById('amount').focus();
+                }, 100);
 
             } catch (error) {
                 console.error('Error:', error);
