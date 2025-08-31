@@ -203,22 +203,19 @@
             margin-bottom: 20px;
             font-size: 14px;
             color: #0066cc;
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>💰 Облік витрат</h1>
-        
-        <div class="setup-info">
-            <strong>Налаштування:</strong> Замініть URL в коді на ваш Google Apps Script URL після налаштування таблиці.
-        </div>
 
         <form id="expenseForm">
             <div class="form-group">
                 <label for="amount">Сума (₴)</label>
                 <div class="amount-input">
-                    <input type="number" id="amount" name="amount" required min="0" step="0.01" placeholder="0.00">
+                    <input type="number" id="amount" name="amount" required min="0" step="0.01" placeholder="0.00" inputmode="decimal">
                 </div>
             </div>
 
@@ -228,7 +225,7 @@
                     <option value="">Оберіть категорію</option>
                     <option value="Квартира">🏠 Квартира</option>
                     <option value="Автомобіль">🚗 Автомобіль</option>
-                    <option value="Продукти">🛒 Продукти</option>
+                    <option value="Продукти" selected>🛒 Продукти</option>
                     <option value="Здоров'я">💊 Здоров'я</option>
                     <option value="Все інше">📦 Все інше</option>
                 </select>
@@ -253,23 +250,61 @@
     </div>
 
     <script>
-        // Настройка URL для Google Apps Script (замените на ваш URL)
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzlP_J_14goNfoAIj1OEzDtCv5ks1n1I3Ujk5r9pasooZ3vsjX3dE_gpJQfl_Mgdeggqw/exec';
+        // Реєстрація Service Worker для PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('data:application/javascript;base64,Y29uc3QgQ0FDSEVfTkFNRSA9ICdleHBlbnNlLXRyYWNrZXItdjEnOwpjb25zdCBVUkxTX1RPX0NBQ0hFID0gWwogICcuLycKXTsKCnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignaW5zdGFsbCcsIGV2ZW50ID0+IHsKICBldmVudC53YWl0VW50aWwoCiAgICBjYWNoZXMub3BlbihDQUNIRV9OQU1FKQogICAgICAudGhlbihjYWNoZSA9PiBjYWNoZS5hZGRBbGwoVVJMU19UT19DQUNIRSkpCiAgKTsKfSk7CgpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2ZldGNoJywgZXZlbnQgPT4gewogIGV2ZW50LnJlc3BvbmRXaXRoKAogICAgY2FjaGVzLm1hdGNoKGV2ZW50LnJlcXVlc3QpCiAgICAgIC50aGVuKHJlc3BvbnNlID0+IHJlc3BvbnNlIHx8IGZldGNoKGV2ZW50LnJlcXVlc3QpKQogICk7Cn0pOw==')
+                .then(function(registration) {
+                    console.log('ServiceWorker зареєстровано');
+                })
+                .catch(function(error) {
+                    console.log('ServiceWorker не вдалося зареєструвати');
+                });
+            });
+        }
 
-        // Установка сегодняшней даты
+        // Обробник для встановлення PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallButton();
+        });
+
+        function showInstallButton() {
+            const installBtn = document.createElement('button');
+            installBtn.textContent = '📱 Встановити додаток';
+            installBtn.className = 'submit-btn';
+            installBtn.style.marginTop = '10px';
+            installBtn.style.background = '#28a745';
+            installBtn.onclick = installApp;
+            document.querySelector('.container').appendChild(installBtn);
+        }
+
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((result) => {
+                    deferredPrompt = null;
+                });
+            }
+        }
+        const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+
+        // Встановлення сьогоднішньої дати
         document.addEventListener('DOMContentLoaded', function() {
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('date').value = today;
         });
 
-        // Обработка формы
+        // Обробка форми
         document.getElementById('expenseForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
             const statusMessage = document.getElementById('statusMessage');
             
-            // Получение данных формы
+            // Отримання даних форми
             const formData = new FormData(this);
             const data = {
                 amount: parseFloat(formData.get('amount')),
@@ -279,18 +314,18 @@
                 timestamp: new Date().toISOString()
             };
 
-            // Показать состояние загрузки
+            // Показати стан завантаження
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="loading"></span>Відправлення...';
             statusMessage.style.display = 'none';
 
             try {
-                // Проверка URL
+                // Перевірка URL
                 if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbzlP_J_14goNfoAIj1OEzDtCv5ks1n1I3Ujk5r9pasooZ3vsjX3dE_gpJQfl_Mgdeggqw/exec') {
                     throw new Error('Необхідно налаштувати Google Apps Script URL');
                 }
 
-                // Отправка данных
+                // Відправка даних
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'cors',
@@ -307,17 +342,17 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Успешно отправлено
+                    // Успішно відправлено
                     statusMessage.className = 'status-message status-success';
                     statusMessage.textContent = '✅ Витрату успішно додано!';
                     statusMessage.style.display = 'block';
                     
-                    // Очистка формы
+                    // Очищення форми
                     document.getElementById('amount').value = '';
-                    document.getElementById('category').value = '';
+                    document.getElementById('category').value = 'Продукти';
                     document.getElementById('comment').value = '';
                     
-                    // Фокус на поле суммы для быстрого ввода следующего расхода
+                    // Фокус на поле суми для швидкого введення наступної витрати
                     setTimeout(() => {
                         document.getElementById('amount').focus();
                     }, 100);
@@ -331,23 +366,23 @@
                 statusMessage.textContent = `❌ Помилка: ${error.message}`;
                 statusMessage.style.display = 'block';
             } finally {
-                // Восстановление кнопки
+                // Відновлення кнопки
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Додати витрату';
                 
-                // Скрыть сообщение через 5 секунд
+                // Приховати повідомлення через 5 секунд
                 setTimeout(() => {
                     statusMessage.style.display = 'none';
                 }, 5000);
             }
         });
 
-        // Автофокус на поле суммы
+        // Автофокус на поле суми
         window.addEventListener('load', function() {
             document.getElementById('amount').focus();
         });
 
-        // Быстрый ввод: Enter в поле суммы переходит к категории
+        // Швидке введення: Enter в полі суми переходить до категорії
         document.getElementById('amount').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
